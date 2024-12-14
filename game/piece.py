@@ -1,12 +1,25 @@
 import pygame
+from enum import Enum
+
+class PieceType(Enum):
+    PAWN = "pawn"
+    ROOK = "rook"
+    KNIGHT = "knight"
+    BISHOP = "bishop"
+    QUEEN = "queen"
+    KING = "king"
+
+class PieceColor(Enum):
+    WHITE = "white"
+    BLACK = "black"
 
 class Piece:
-    def __init__(self, color, name, image_width, image_height):
+    def __init__(self, color: PieceColor, name: PieceType, image_width: int, image_height: int):
         self.color = color
         self.name = name
         self.image_width = image_width
         self.image_height = image_height
-        self.image = self.load_image(f"assets/{color}_{name}.png", image_width=image_width, image_height=image_height)
+        self.image = self.load_image(f"assets/{color.value}_{name.value}.png", image_width=image_width, image_height=image_height)
     
     def load_image(self, image_path, image_width, image_height, scale_factor=0.8):
         image = pygame.image.load(image_path).convert_alpha()
