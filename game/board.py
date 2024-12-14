@@ -2,6 +2,8 @@ from typing import Dict, Tuple, Optional
 import pygame
 from game.piece import Piece, PieceType, PieceColor
 from utils.gameobject import GameObject
+import globals
+from utils.image import load_image, draw_image
 
 class Board(GameObject):
     def __init__(self, columns, rows, light_cell_color, dark_cell_color, square_size, screen):
@@ -13,6 +15,12 @@ class Board(GameObject):
         self.representation: Dict[Tuple[int, int], Piece] = {}
         self.screen = screen
         self.setup_initial_board()
+        self.overlay_image = load_image("assets/overlay.png", self.square_size, self.square_size, 0.3)
+    
+    def update(self):
+        self.draw_board()
+        self.draw_pieces()
+        self.draw_legal_moves()
         
     def setup_initial_board(self):
         self.representation.update({
@@ -73,13 +81,18 @@ class Board(GameObject):
             piece_rect = piece.image.get_rect()
             x = col * self.square_size + (self.square_size - piece_rect.width) // 2
             y = row * self.square_size + (self.square_size - piece_rect.height) // 2
-            piece.draw_piece(self.screen, x, y)
+            draw_image(piece.image, self.screen, x, y)
     
-    def update(self):
-        self.draw_board()
-        self.draw_pieces()
+    def draw_legal_moves(self):
+        game = globals.game_instance
+        if game.legal_moves:
+            for (col, row) in game.legal_moves:
+                image_rect = self.overlay_image.get_rect()
+                x = col * self.square_size + (self.square_size - image_rect.width) // 2
+                y = row * self.square_size + (self.square_size - image_rect.height) // 2
+                draw_image(self.overlay_image, self.screen, x, y)
     
-    def get_piece_on_pos(self, pos: Tuple[int, int]) -> Optional[Piece]:
+    def get_piece_obj_on_pos(self, pos: Tuple[int, int]) -> Optional[Piece]:
         if pos in self.representation:
             return self.representation[pos]
         else:

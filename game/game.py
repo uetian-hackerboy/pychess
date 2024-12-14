@@ -1,15 +1,27 @@
 import pygame
 from game.board import Board
 from utils.gameobject import GameObject
+import globals
 
 class Game(GameObject):
+    _instance = None
+
+    def __new__(cls, screen, square_size):
+        if cls._instance is None:
+            cls._instance = super(Game, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self, screen, square_size):
-        self.screen = screen
-        self.square_size = square_size
-        self.board = Board(columns=8, rows=8, light_cell_color=(232,237,249), dark_cell_color=(183,192,216), square_size=square_size, screen=screen)
-        self.selected_piece = None
-        self.selected_coord = None
-        self.dragging = False
+        if not hasattr(self, 'initialized'):
+            self.screen = screen
+            self.square_size = square_size
+            self.board = Board(columns=8, rows=8, light_cell_color=(232,237,249), dark_cell_color=(183,192,216), square_size=square_size, screen=screen)
+            self.selected_piece = None
+            self.selected_coord = None
+            self.dragging = False
+            self.legal_moves = None
+            self.initialized = True
+            globals.game_instance = self
     
     def update(self):
         return self.board.update()
@@ -31,24 +43,27 @@ class Game(GameObject):
         pygame.quit()
 
     def handle_mouse_down(self, pos):
-        """Handle mouse click event."""
         col, row = pos[0] // self.square_size, pos[1] // self.square_size
         self.selected_coord = (col, row)
-        self.selected_piece = self.board.get_piece_on_pos(self.selected_coord)
+        self.selected_piece = self.board.get_piece_obj_on_pos(self.selected_coord)
         if self.selected_piece:
+            self.legal_moves = self.selected_piece.get_legal_moves(self.selected_coord)
             del[self.board.representation[self.selected_coord]]
             self.dragging = True
 
     def handle_mouse_up(self, pos):
-        """Handle mouse release event."""
         if self.dragging:
             col, row = pos[0] // self.square_size, pos[1] // self.square_size
-            self.board.representation[(col, row)] = self.selected_piece
+            if (col, row) in self.legal_moves:
+                self.board.representation[(col, row)] = self.selected_piece
+            else:
+                self.board.representation[self.selected_coord] = self.selected_piece
             self.dragging = False
             self.selected_piece = None
+            self.legal_moves = None
+                
 
     def handle_piece_drag(self):
-        """Drag the piece while the mouse is down."""
         mouse_x, mouse_y = pygame.mouse.get_pos()
         piece_image = self.selected_piece.image
         piece_rect = piece_image.get_rect()

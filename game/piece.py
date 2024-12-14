@@ -1,6 +1,8 @@
+from typing import List, Tuple
 import pygame
 from enum import Enum
-
+import globals
+from utils.image import load_image
 class PieceType(Enum):
     PAWN = "pawn"
     ROOK = "rook"
@@ -19,22 +21,109 @@ class Piece:
         self.name = name
         self.image_width = image_width
         self.image_height = image_height
-        self.image = self.load_image(f"assets/{color.value}_{name.value}.png", image_width=image_width, image_height=image_height)
+        self.image = load_image(f"assets/{color.value}_{name.value}.png", image_width=image_width, image_height=image_height)
     
-    def load_image(self, image_path, image_width, image_height, scale_factor=0.8):
-        image = pygame.image.load(image_path).convert_alpha()
-        original_width, original_height = image.get_size()
-    
-        aspect_ratio = original_width / original_height
+    def get_legal_moves(self, current_coord):
+        legal_coords: List[Tuple[int, int]] = []
+        board = globals.game_instance.board
+        col, row = current_coord
+        if self.name == PieceType.PAWN:
+            if self.color == PieceColor.WHITE:
+                if row == 6:
+                    legal_coords.append((col, row - 1))
+                    legal_coords.append((col, row - 2))
+                else:
+                    legal_coords.append((col, row - 1))
+                legal_coords = [(c, r) for c, r in legal_coords if not board.representation.get((c, r), None)]
+                right_diagonal_coord = (col + 1, row - 1)
+                piece_at_coord = board.representation.get(right_diagonal_coord, None)
+                if piece_at_coord is not None:
+                    legal_coords.append(right_diagonal_coord)
+                left_diagonal_coord = (col - 1, row - 1)
+                piece_at_coord = board.representation.get(left_diagonal_coord, None)
+                if piece_at_coord and piece_at_coord.color != self.color:
+                    legal_coords.append(left_diagonal_coord)
+            else:
+                if row == 1:
+                    legal_coords.append((col, row + 1))
+                    legal_coords.append((col, row + 2))
+                else:
+                    legal_coords.append((col, row + 1))
+                legal_coords = [(c, r) for c, r in legal_coords if not board.representation.get((c, r), None)]
+                right_diagonal_coord = (col + 1, row + 1)
+                piece_at_coord = board.representation.get(right_diagonal_coord, None)
+                if piece_at_coord is not None:
+                    legal_coords.append(right_diagonal_coord)
+                left_diagonal_coord = (col - 1, row + 1)
+                piece_at_coord = board.representation.get(left_diagonal_coord, None)
+                if piece_at_coord and piece_at_coord.color != self.color:
+                    legal_coords.append(left_diagonal_coord)
+        
+        elif self.name == PieceType.KNIGHT:
+            offsets: List[Tuple[int, int]] = [(-1, -2), (-2, -1), (-2, 1), (-1, 2), (1, 2), (2, 1), (2, -1), (1, -2)]
+            for offset in offsets:
+                col_offset, row_offset = offset
+                new_coord = (col + col_offset, row + row_offset)
+                piece_at_coord = board.representation.get(new_coord, None)
+                if piece_at_coord is None or piece_at_coord.color != self.color:
+                    legal_coords.append(new_coord)
+        
+        elif self.name == PieceType.BISHOP:
+            def add_legal_moves_in_direction(col, row, col_offset, row_offset):
+                new_coord = (col + col_offset, row + row_offset)
+                if 0 <= new_coord[0] <= 7 and 0 <= new_coord[1] <= 7:
+                    piece_at_coord = board.representation.get(new_coord, None)
+                    if piece_at_coord is None:
+                        legal_coords.append(new_coord)
+                        add_legal_moves_in_direction(new_coord[0], new_coord[1], col_offset, row_offset)
+                    elif piece_at_coord.color != self.color:
+                        legal_coords.append(new_coord)
+                else:
+                    return
+            directions = [(-1, -1), (1, -1), (-1, 1), (1, 1)]
+            for col_offset, row_offset in directions:
+                add_legal_moves_in_direction(col, row, col_offset, row_offset)
 
-        if image_width / image_height > aspect_ratio:
-            new_height = int(image_height * scale_factor)
-            new_width = int(new_height * aspect_ratio)
-        else:
-            new_width = int(image_width * scale_factor)
-            new_height = int(new_width / aspect_ratio)
+        elif self.name == PieceType.ROOK:
+            def add_legal_moves_in_direction(col, row, col_offset, row_offset):
+                new_coord = (col + col_offset, row + row_offset)
+                if 0 <= new_coord[0] <= 7 and 0 <= new_coord[1] <= 7:
+                    piece_at_coord = board.representation.get(new_coord, None)
+                    if piece_at_coord is None:
+                        legal_coords.append(new_coord)
+                        add_legal_moves_in_direction(new_coord[0], new_coord[1], col_offset, row_offset)
+                    elif piece_at_coord.color != self.color:
+                        legal_coords.append(new_coord)
+                else:
+                    return
+            directions = [(0, -1), (-1, 0), (0, 1), (1, 0)]
+            for col_offset, row_offset in directions:
+                add_legal_moves_in_direction(col, row, col_offset, row_offset)
 
-        return pygame.transform.smoothscale(image, (new_width, new_height))
-    
-    def draw_piece(self, screen, x_coord, y_coord):
-        screen.blit(self.image, (x_coord, y_coord))
+        elif self.name == PieceType.QUEEN:
+            def add_legal_moves_in_direction(col, row, col_offset, row_offset):
+                new_coord = (col + col_offset, row + row_offset)
+                if 0 <= new_coord[0] <= 7 and 0 <= new_coord[1] <= 7:
+                    piece_at_coord = board.representation.get(new_coord, None)
+                    if piece_at_coord is None:
+                        legal_coords.append(new_coord)
+                        add_legal_moves_in_direction(new_coord[0], new_coord[1], col_offset, row_offset)
+                    elif piece_at_coord.color != self.color:
+                        legal_coords.append(new_coord)
+                else:
+                    return
+            directions = [(0, -1), (-1, 0), (0, 1), (1, 0), (-1, -1), (1, -1), (-1, 1), (1, 1)]
+            for col_offset, row_offset in directions:
+                add_legal_moves_in_direction(col, row, col_offset, row_offset)
+
+        elif self.name == PieceType.KING:
+            offsets: List[Tuple[int, int]] = [(0, -1), (-1, 0), (0, 1), (1, 0), (-1, -1), (1, -1), (-1, 1), (1, 1)]
+            for offset in offsets:
+                col_offset, row_offset = offset
+                new_coord = (col + col_offset, row + row_offset)
+                piece_at_coord = board.representation.get(new_coord, None)
+                if piece_at_coord is None or piece_at_coord.color != self.color:
+                    legal_coords.append(new_coord)
+        
+        legal_coords = [(c, r) for c, r in legal_coords if 0 <= c <= 7 and 0 <= r <= 7]
+        return legal_coords
