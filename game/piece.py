@@ -21,15 +21,19 @@ class Piece:
         self.name = name
         self.image_width = image_width
         self.image_height = image_height
+        self.number_of_moves = 0
         self.image = load_image(f"assets/{color.value}_{name.value}.png", image_width=image_width, image_height=image_height)
     
+    def increment_num_of_moves(self):
+        self.number_of_moves += 1
+         
     def get_legal_moves(self, current_coord):
         legal_coords: List[Tuple[int, int]] = []
         board = globals.game_instance.board
         col, row = current_coord
         if self.name == PieceType.PAWN:
             if self.color == PieceColor.WHITE:
-                if row == 6:
+                if self.number_of_moves == 0:
                     legal_coords.append((col, row - 1))
                     legal_coords.append((col, row - 2))
                 else:
@@ -44,7 +48,7 @@ class Piece:
                 if piece_at_coord and piece_at_coord.color != self.color:
                     legal_coords.append(left_diagonal_coord)
             else:
-                if row == 1:
+                if self.number_of_moves == 0:
                     legal_coords.append((col, row + 1))
                     legal_coords.append((col, row + 2))
                 else:

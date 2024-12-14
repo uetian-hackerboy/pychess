@@ -2,6 +2,7 @@ import pygame
 from game.board import Board
 from utils.gameobject import GameObject
 import globals
+from game.piece import PieceType
 
 class Game(GameObject):
     _instance = None
@@ -55,6 +56,7 @@ class Game(GameObject):
         if self.dragging:
             col, row = pos[0] // self.square_size, pos[1] // self.square_size
             if (col, row) in self.legal_moves:
+                self.selected_piece.increment_num_of_moves()
                 self.board.representation[(col, row)] = self.selected_piece
             else:
                 self.board.representation[self.selected_coord] = self.selected_piece
