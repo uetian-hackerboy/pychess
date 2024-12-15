@@ -40,12 +40,21 @@ class Piece:
                     legal_coords.append((col, row - 1))
                 legal_coords = [(c, r) for c, r in legal_coords if not board.representation.get((c, r), None)]
                 right_diagonal_coord = (col + 1, row - 1)
-                piece_at_coord = board.representation.get(right_diagonal_coord, None)
-                if piece_at_coord is not None:
+                piece_at_right_diagonal_coord: Piece = board.representation.get(right_diagonal_coord, None)
+                if piece_at_right_diagonal_coord and piece_at_right_diagonal_coord.color != self.color:
                     legal_coords.append(right_diagonal_coord)
                 left_diagonal_coord = (col - 1, row - 1)
-                piece_at_coord = board.representation.get(left_diagonal_coord, None)
-                if piece_at_coord and piece_at_coord.color != self.color:
+                piece_at_left_diagonal_coord : Piece= board.representation.get(left_diagonal_coord, None)
+                if piece_at_left_diagonal_coord and piece_at_left_diagonal_coord.color != self.color:
+                    legal_coords.append(left_diagonal_coord)
+                right_coord=(col + 1 , row)
+                piece_at_right_coord : Piece = board.representation.get(right_coord, None)
+                if piece_at_right_coord and piece_at_right_coord.name == PieceType.PAWN and piece_at_right_coord.color != self.color and piece_at_right_coord.number_of_moves ==1 and (row == 3 or row == 4):
+                    legal_coords.append(right_diagonal_coord)
+                
+                left_coord=(col - 1 , row)
+                piece_at_left_coord : Piece = board.representation.get(left_coord, None)
+                if piece_at_left_coord and piece_at_left_coord.name == PieceType.PAWN and piece_at_left_coord.color != self.color and piece_at_left_coord.number_of_moves ==1 and (row == 3 or row == 4):
                     legal_coords.append(left_diagonal_coord)
             else:
                 if self.number_of_moves == 0:
@@ -56,13 +65,21 @@ class Piece:
                 legal_coords = [(c, r) for c, r in legal_coords if not board.representation.get((c, r), None)]
                 right_diagonal_coord = (col + 1, row + 1)
                 piece_at_coord = board.representation.get(right_diagonal_coord, None)
-                if piece_at_coord is not None:
+                if piece_at_coord and piece_at_coord.color != self.color:
                     legal_coords.append(right_diagonal_coord)
                 left_diagonal_coord = (col - 1, row + 1)
                 piece_at_coord = board.representation.get(left_diagonal_coord, None)
                 if piece_at_coord and piece_at_coord.color != self.color:
                     legal_coords.append(left_diagonal_coord)
-        
+                right_coord=(col + 1 , row)
+                piece_at_right_coord : Piece = board.representation.get(right_coord, None)
+                if piece_at_right_coord and piece_at_right_coord.name == PieceType.PAWN and piece_at_right_coord.color != self.color and piece_at_right_coord.number_of_moves ==1  and (row == 3 or row == 4):
+                    legal_coords.append(right_diagonal_coord)
+                
+                left_coord=(col - 1 , row)
+                piece_at_left_coord : Piece = board.representation.get(left_coord, None)
+                if piece_at_left_coord and piece_at_left_coord.name == PieceType.PAWN and piece_at_left_coord.color != self.color and piece_at_left_coord.number_of_moves ==1  and (row == 3 or row == 4):
+                    legal_coords.append(left_diagonal_coord)
         elif self.name == PieceType.KNIGHT:
             offsets: List[Tuple[int, int]] = [(-1, -2), (-2, -1), (-2, 1), (-1, 2), (1, 2), (2, 1), (2, -1), (1, -2)]
             for offset in offsets:
@@ -120,7 +137,7 @@ class Piece:
             for col_offset, row_offset in directions:
                 add_legal_moves_in_direction(col, row, col_offset, row_offset)
 
-        elif self.name == PieceType.KING:
+        elif self.name == PieceType.KING :
             offsets: List[Tuple[int, int]] = [(0, -1), (-1, 0), (0, 1), (1, 0), (-1, -1), (1, -1), (-1, 1), (1, 1)]
             for offset in offsets:
                 col_offset, row_offset = offset
@@ -128,6 +145,30 @@ class Piece:
                 piece_at_coord = board.representation.get(new_coord, None)
                 if piece_at_coord is None or piece_at_coord.color != self.color:
                     legal_coords.append(new_coord)
-        
+            if self.number_of_moves == 0: 
+                   right_coord = (col + 1, row)
+                   right_more_coord = (col + 2, row)
+                   right_most_coord = (col + 3, row)
+                   left_coord = (col-1 , row)
+                   left_more_coord = (col-2 , row)
+                   left_most_coord = (col-3 , row)
+                   left_the_most_coord = (col - 4,row)
+                
+                   piece_at_right_coord = board.representation.get(right_coord , None)
+                   piece_at_right_more_coord = board.representation.get(right_more_coord , None)
+                   piece_at_right_most_coord: Piece = board.representation.get(right_most_coord , None)
+                   piece_at_left_coord = board.representation.get(left_coord , None)   
+                   piece_at_left_more_coord = board.representation.get(left_more_coord , None)   
+                   piece_at_left_most_coord = board.representation.get(left_most_coord , None)   
+                   piece_at_left_the_most_coord = board.representation.get(left_the_most_coord , None)   
+                   if piece_at_right_coord is None and piece_at_right_more_coord is None and piece_at_right_most_coord is not None and piece_at_right_most_coord.name == PieceType.ROOK and piece_at_right_most_coord.number_of_moves == 0:
+                        legal_coords.append(right_more_coord)                    
+                   
+                   if piece_at_left_coord is None and piece_at_left_more_coord is None and piece_at_left_most_coord is None and piece_at_left_the_most_coord is not None and piece_at_left_the_most_coord.name == PieceType.ROOK and piece_at_left_the_most_coord.number_of_moves == 0:
+                        legal_coords.append(left_more_coord)  
+
+
         legal_coords = [(c, r) for c, r in legal_coords if 0 <= c <= 7 and 0 <= r <= 7]
         return legal_coords
+    
+         
