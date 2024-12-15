@@ -55,31 +55,27 @@ class Game(GameObject):
     def handle_mouse_up(self, pos):
         if self.dragging:
             col, row = pos[0] // self.square_size, pos[1] // self.square_size
+            col_selected, row_selected = self.selected_coord
             if self.legal_moves is not None:
              if (col, row) in self.legal_moves:
                 self.selected_piece.increment_num_of_moves()
-                if self.selected_piece.name == PieceType.KING and self.selected_coord == (4,row):
-                   if col == 6  :
-                    self.board.representation[(5, row)] = self.board.representation[(7,row)]
-                    del[self.board.representation[(7, row)]]
-                   elif col == 2 :
-                    self.board.representation[(3, row)] = self.board.representation[(0,row)]
-                    del[self.board.representation[(0, row)]]
+                if self.selected_piece.name == PieceType.KING:
+                    offset = col - col_selected
+                    if offset == 2:
+                        self.board.representation[(col - 1, row)] = self.board.representation[(col + 1, row)]
+                        del[self.board.representation[(col + 1, row)]]
+                    elif offset == -2:
+                        self.board.representation[(col + 1, row)] = self.board.representation[(col - 2, row)]
+                        del[self.board.representation[(col - 2, row)]]
                 if self.selected_piece.name == PieceType.PAWN:
                     piece_at_target = self.board.representation.get((col, row), None)
                     if piece_at_target is None:
-                        col_selected, row_selected = self.selected_coord
                         offset = (col_selected - col, row_selected - row)
-                        if self.selected_piece.color == PieceColor.WHITE:
-                            if offset == (-1, 1):
-                                del[self.board.representation[(col_selected + 1, row_selected)]]
-                            if offset == (1, 1):
-                                del[self.board.representation[(col_selected - 1, row_selected)]]
-                        else:
-                            if offset == (-1, -1):
-                                del[self.board.representation[(col_selected + 1, row_selected)]]
-                            if offset == (1, -1):
-                                del[self.board.representation[(col_selected - 1, row_selected)]]
+                        increment = 1 if self.selected_piece.color == PieceColor.WHITE else -1
+                        offsets = [-1, 1]
+                        for os in offsets:
+                            if offset == (os, increment):
+                                del[self.board.representation[(col_selected - os, row_selected)]]
                 self.board.representation[(col, row)] = self.selected_piece
              else:
                 self.board.representation[self.selected_coord] = self.selected_piece
