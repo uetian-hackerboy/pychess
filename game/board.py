@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, Optional
+from typing import Dict, List, Tuple, Optional
 import pygame
 from game.piece import Piece, PieceType, PieceColor
 from utils.gameobject import GameObject
@@ -15,6 +15,7 @@ class Board(GameObject):
         self.representation: Dict[Tuple[int, int], Piece] = {}
         self.screen = screen
         self.setup_initial_board()
+        self.clone_representation = self.representation
         self.overlay_image = load_image("assets/overlay.png", self.square_size, self.square_size, 0.3)
     
     def update(self):
@@ -97,4 +98,18 @@ class Board(GameObject):
             return self.representation[pos]
         else:
             return None
-        
+    
+    def generate_threat_map(self, color: PieceColor):
+        threat_map = []
+        coord_pieces = self.get_all_pieces_of_color(color)
+        for coord, piece in coord_pieces:
+            moves = piece.get_legal_moves(coord)
+            threat_map.extend(moves)
+        return threat_map 
+
+    def get_all_pieces_of_color(self, color: PieceColor):
+        pieces = []
+        for coord, piece in self.clone_representation.items():
+            if piece.color == color:
+                pieces.append((coord, piece))
+        return pieces

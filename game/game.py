@@ -22,6 +22,7 @@ class Game(GameObject):
             self.dragging = False
             self.legal_moves = None
             self.initialized = True
+            self.current_turn: PieceColor = PieceColor.WHITE
             globals.game_instance = self
     
     def update(self):
@@ -56,33 +57,60 @@ class Game(GameObject):
         if self.dragging:
             col, row = pos[0] // self.square_size, pos[1] // self.square_size
             col_selected, row_selected = self.selected_coord
+            print(self.king_will_be_in_danger((col, row)))
             if self.legal_moves is not None:
-             if (col, row) in self.legal_moves:
-                self.selected_piece.increment_num_of_moves()
-                if self.selected_piece.name == PieceType.KING:
-                    offset = col - col_selected
-                    if offset == 2:
-                        self.board.representation[(col - 1, row)] = self.board.representation[(col + 1, row)]
-                        del[self.board.representation[(col + 1, row)]]
-                    elif offset == -2:
-                        self.board.representation[(col + 1, row)] = self.board.representation[(col - 2, row)]
-                        del[self.board.representation[(col - 2, row)]]
-                if self.selected_piece.name == PieceType.PAWN:
-                    piece_at_target = self.board.representation.get((col, row), None)
-                    if piece_at_target is None:
-                        offset = (col_selected - col, row_selected - row)
-                        increment = 1 if self.selected_piece.color == PieceColor.WHITE else -1
-                        offsets = [-1, 1]
-                        for os in offsets:
-                            if offset == (os, increment):
-                                del[self.board.representation[(col_selected - os, row_selected)]]
-                self.board.representation[(col, row)] = self.selected_piece
-             else:
-                self.board.representation[self.selected_coord] = self.selected_piece
-             self.dragging = False
-             self.selected_piece = None
-             self.legal_moves = None
-                
+                if not self.king_will_be_in_danger((col, row)):
+                    if (col, row) in self.legal_moves:
+                        self.selected_piece.increment_num_of_moves()
+                        if self.selected_piece.name == PieceType.KING:
+                            offset = col - col_selected
+                            if offset == 2:
+                                self.board.representation[(col - 1, row)] = self.board.representation[(col + 1, row)]
+                                del[self.board.representation[(col + 1, row)]]
+                            elif offset == -2:
+                                self.board.representation[(col + 1, row)] = self.board.representation[(col - 2, row)]
+                                del[self.board.representation[(col - 2, row)]]
+                        if self.selected_piece.name == PieceType.PAWN:
+                            piece_at_target = self.board.representation.get((col, row), None)
+                            if piece_at_target is None:
+                                offset = (col_selected - col, row_selected - row)
+                                increment = 1 if self.selected_piece.color == PieceColor.WHITE else -1
+                                offsets = [-1, 1]
+                                for os in offsets:
+                                    if offset == (os, increment):
+                                        del[self.board.representation[(col_selected - os, row_selected)]]
+                        self.board.representation[(col, row)] = self.selected_piece
+                    else:
+                        self.board.representation[self.selected_coord] = self.selected_piece
+                else:
+                    self.board.representation[self.selected_coord] = self.selected_piece
+            self.dragging = False
+            self.selected_piece = None
+            self.legal_moves = None
+
+    def king_will_be_in_danger(self, target_coord):
+        self.board.clone_representation = self.board.representation.copy()
+        col, row = target_coord
+
+        if self.selected_coord in self.board.clone_representation:
+            del self.board.clone_representation[self.selected_coord]
+        self.board.clone_representation[(col, row)] = self.selected_piece
+
+        king_position = None
+        for coord, piece in self.board.clone_representation.items():
+            if piece.name == PieceType.KING and piece.color == self.current_turn:
+                king_position = coord
+                break
+
+        if not king_position:
+            raise ValueError("King is not even on the board bro.")
+
+        opponent = PieceColor.WHITE if self.current_turn == PieceColor.BLACK else PieceColor.BLACK
+        threat_coords = self.board.generate_threat_map(opponent)
+
+        if king_position in threat_coords:
+            return True
+        return False
 
     def handle_piece_drag(self):
          if self.selected_piece is not None:
