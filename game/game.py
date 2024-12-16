@@ -48,8 +48,8 @@ class Game(GameObject):
         col, row = pos[0] // self.square_size, pos[1] // self.square_size
         self.selected_coord = (col, row)
         self.selected_piece = self.board.get_piece_obj_on_pos(self.selected_coord)
-        if self.selected_piece:
-            self.legal_moves = self.selected_piece.get_legal_moves(self.selected_coord)
+        if self.selected_piece and self.selected_piece.color == self.current_turn:
+            self.legal_moves = self.selected_piece.get_legal_moves(self.selected_coord, self.board.representation)
             del[self.board.representation[self.selected_coord]]
             self.dragging = True
 
@@ -57,7 +57,6 @@ class Game(GameObject):
         if self.dragging:
             col, row = pos[0] // self.square_size, pos[1] // self.square_size
             col_selected, row_selected = self.selected_coord
-            print(self.king_will_be_in_danger((col, row)))
             if self.legal_moves is not None:
                 if not self.king_will_be_in_danger((col, row)):
                     if (col, row) in self.legal_moves:
@@ -80,6 +79,10 @@ class Game(GameObject):
                                     if offset == (os, increment):
                                         del[self.board.representation[(col_selected - os, row_selected)]]
                         self.board.representation[(col, row)] = self.selected_piece
+                        if self.current_turn == PieceColor.WHITE:
+                            self.current_turn = PieceColor.BLACK
+                        else:
+                            self.current_turn = PieceColor.WHITE
                     else:
                         self.board.representation[self.selected_coord] = self.selected_piece
                 else:
@@ -89,15 +92,15 @@ class Game(GameObject):
             self.legal_moves = None
 
     def king_will_be_in_danger(self, target_coord):
-        self.board.clone_representation = self.board.representation.copy()
+        clone_representation = self.board.representation.copy()
         col, row = target_coord
 
-        if self.selected_coord in self.board.clone_representation:
-            del self.board.clone_representation[self.selected_coord]
-        self.board.clone_representation[(col, row)] = self.selected_piece
+        if self.selected_coord in clone_representation:
+            del clone_representation[self.selected_coord]
+        clone_representation[(col, row)] = self.selected_piece
 
         king_position = None
-        for coord, piece in self.board.clone_representation.items():
+        for coord, piece in clone_representation.items():
             if piece.name == PieceType.KING and piece.color == self.current_turn:
                 king_position = coord
                 break
@@ -106,7 +109,7 @@ class Game(GameObject):
             raise ValueError("King is not even on the board bro.")
 
         opponent = PieceColor.WHITE if self.current_turn == PieceColor.BLACK else PieceColor.BLACK
-        threat_coords = self.board.generate_threat_map(opponent)
+        threat_coords = self.board.generate_threat_map(opponent, clone_representation)
 
         if king_position in threat_coords:
             return True

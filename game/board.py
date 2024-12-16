@@ -15,7 +15,6 @@ class Board(GameObject):
         self.representation: Dict[Tuple[int, int], Piece] = {}
         self.screen = screen
         self.setup_initial_board()
-        self.clone_representation = self.representation
         self.overlay_image = load_image("assets/overlay.png", self.square_size, self.square_size, 0.3)
     
     def update(self):
@@ -99,17 +98,17 @@ class Board(GameObject):
         else:
             return None
     
-    def generate_threat_map(self, color: PieceColor):
+    def generate_threat_map(self, color: PieceColor, clone_representation):
         threat_map = []
-        coord_pieces = self.get_all_pieces_of_color(color)
+        coord_pieces = self.get_all_pieces_of_color(color, clone_representation)
         for coord, piece in coord_pieces:
-            moves = piece.get_legal_moves(coord)
+            moves = piece.get_legal_moves(coord, clone_representation)
             threat_map.extend(moves)
         return threat_map 
 
-    def get_all_pieces_of_color(self, color: PieceColor):
+    def get_all_pieces_of_color(self, color: PieceColor, clone_representation):
         pieces = []
-        for coord, piece in self.clone_representation.items():
+        for coord, piece in clone_representation.items():
             if piece.color == color:
                 pieces.append((coord, piece))
         return pieces
