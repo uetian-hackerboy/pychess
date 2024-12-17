@@ -32,7 +32,8 @@ class Piece:
          
     def get_legal_moves(self, current_coord, representation):
         legal_coords: List[Tuple[int, int]] = []
-        self.board = globals.game_instance.board
+        game = globals.game_instance
+        self.board = game.board
         col, row = current_coord
         if self.name == PieceType.PAWN:
             increment = row - 1 if self.color == PieceColor.WHITE else row + 1
@@ -87,7 +88,7 @@ class Piece:
                 piece_at_coord = representation.get(new_coord, None)
                 if piece_at_coord is None or piece_at_coord.color != self.color:
                     legal_coords.append(new_coord)
-                    
+            
             if self.number_of_moves == 0:
                 right_pieces = []
                 left_pieces = []
@@ -109,6 +110,11 @@ class Piece:
 
         legal_coords = [(c, r) for c, r in legal_coords if 0 <= c <= 7 and 0 <= r <= 7]
         return legal_coords
+
+    def is_king_in_check(self, king_pos, color: PieceColor):
+        opponent_color = PieceColor.WHITE if color == PieceColor.BLACK else PieceColor.BLACK
+        threat_coords = self.board.generate_threat_map(opponent_color, self.board.representation)
+        return king_pos in threat_coords
 
     def add_legal_moves_in_direction(self, col, row, col_offset, row_offset, legal_coords, representation):
         new_coord = (col + col_offset, row + row_offset)

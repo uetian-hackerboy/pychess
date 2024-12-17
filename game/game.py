@@ -1,3 +1,4 @@
+from collections import defaultdict
 import pygame
 from game.board import Board
 from utils.gameobject import GameObject
@@ -6,6 +7,7 @@ from game.piece import PieceType, PieceColor
 from utils.image import load_image
 from game.piece import Piece
 from game.engine import Engine
+from utils.zobrist import Zobrist
 
 class Game(GameObject):
     _instance = None
@@ -31,15 +33,100 @@ class Game(GameObject):
             if self.player_turn == PieceColor.BLACK:
                 self.ai_turn = PieceColor.WHITE
             self.engine = Engine(self.board, self.ai_turn)
+            self.game_end = False
+            self.zobrist = Zobrist(self.board)
+            self.history = []
+            self.repetition_count = defaultdict(int)
             globals.game_instance = self
     
     def update(self):
+        if self.is_draw_by_repetition():
+            self.display_draw("Draw by Repetition")
+            self.game_end = True
+            return
+
+        if self.is_draw_by_stalemate():
+            self.display_draw("Draw by Stalemate")
+            self.game_end = True
+            return
         return self.board.update()
+
+    def display_draw(self, draw_reason):
+        font = pygame.font.SysFont("Arial", 30)
+        text = font.render(draw_reason, True, (255, 0, 0))
+        self.screen.blit(text, (self.screen.get_width() // 2 - text.get_width() // 2, self.screen.get_height() // 2 - text.get_height() // 2))
+        pygame.display.update()
+        pygame.time.wait(3000)
+        exit()
+    
+    def is_draw_by_repetition(self):
+        board_hash = self.zobrist.compute_hash()
+        return self.repetition_count[board_hash] >= 3
+
+    def is_draw_by_stalemate(self):
+        return not self.is_checkmate(self.current_turn) and not self.has_valid_moves(self.current_turn)
+
+    def is_checkmate(self, color: PieceColor):
+        opponent_color = PieceColor.WHITE if color == PieceColor.BLACK else PieceColor.BLACK
+        opponent_king_pos = self.get_king_position(opponent_color)
+
+        if self.is_king_in_check(opponent_king_pos, opponent_color):
+            if not self.has_valid_moves(opponent_color):
+                return True
+        return False
+
+    def is_king_in_check(self, king_pos, color: PieceColor):
+        opponent_color = PieceColor.WHITE if color == PieceColor.BLACK else PieceColor.BLACK
+        threat_coords = self.board.generate_threat_map(opponent_color, self.board.representation)
+        return king_pos in threat_coords
+
+    def get_king_position(self, color: PieceColor):
+        for coord, piece in self.board.representation.items():
+            if piece.name == PieceType.KING and piece.color == color:
+                return coord
+        return None
+    
+    def has_valid_moves(self, color: PieceColor):
+        for coord, piece in self.board.representation.items():
+            if piece.color == color:
+                legal_moves = piece.get_legal_moves(coord, self.board.representation)
+                for move in legal_moves:
+                    if not self.king_will_be_in_danger(self.board.representation, coord, piece, move, color):
+                        return True
+        return False
+
+    def display_victory(self, color: PieceColor):
+        winner = "White" if color == PieceColor.BLACK else "Black"
+        font = pygame.font.SysFont("Arial", 30)
+        text = font.render(f"{winner} wins by Checkmate!", True, (255, 0, 0))
+        self.screen.blit(text, (self.screen.get_width() // 2 - text.get_width() // 2, self.screen.get_height() // 2 - text.get_height() // 2))
+        pygame.display.update()
+        pygame.time.wait(3000)
+        exit()
 
     def run(self):
         run = True
+        ai_waiting = False  
+        ai_wait_frames = 10  
+        ai_wait_counter = 0
+
         while run:
             self.update()
+
+            if self.dragging:
+                self.handle_piece_drag()
+
+            if not self.game_end and self.current_turn == self.ai_turn and not self.dragging:
+                if ai_waiting:  
+                    ai_wait_counter += 1
+                    if ai_wait_counter >= ai_wait_frames:
+                        self.engine.make_move()  
+                        self.change_turn()
+                        ai_waiting = False  
+                        ai_wait_counter = 0  
+                else:
+                    ai_waiting = True  
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     run = False
@@ -47,10 +134,10 @@ class Game(GameObject):
                     self.handle_mouse_down(event.pos)
                 elif event.type == pygame.MOUSEBUTTONUP:
                     self.handle_mouse_up(event.pos)
-            if self.dragging:
-                self.handle_piece_drag()
             pygame.display.update()
+
         pygame.quit()
+
 
     def handle_mouse_down(self, pos):
         col, row = pos[0] // self.square_size, pos[1] // self.square_size
@@ -59,9 +146,18 @@ class Game(GameObject):
         if self.selected_piece and self.selected_piece.color == self.current_turn and self.current_turn == self.player_turn:
             legal_moves_cadiates = self.selected_piece.get_legal_moves(self.selected_coord, self.board.representation)
             self.legal_moves = []
+            castling_legal = []
             for legal_move in legal_moves_cadiates:
                 if not self.king_will_be_in_danger(self.board.representation, self.selected_coord, self.selected_piece, legal_move, self.current_turn):
                     self.legal_moves.append(legal_move)
+            if self.selected_piece == PieceType.KING:
+                for lm in self.legal_moves:
+                    current_col, _ = self.selected_coord
+                    lm_col, _ = lm
+                    offset = lm_col - current_col
+                    if offset > 1 or offset < -1:
+                        castling_legal.append(lm)
+                self.legal_moves = castling_legal
             del[self.board.representation[self.selected_coord]]
             self.dragging = True
 
@@ -71,7 +167,6 @@ class Game(GameObject):
             col_selected, row_selected = self.selected_coord
             if self.legal_moves is not None:
                 if (col, row) in self.legal_moves:
-                    self.selected_piece.increment_num_of_moves()
                     if self.selected_piece.name == PieceType.KING:
                         offset = col - col_selected
                         if offset == 2:
@@ -88,16 +183,22 @@ class Game(GameObject):
                             offsets = [-1, 1]
                             for os in offsets:
                                 if offset == (os, increment):
-                                    del[self.board.representation[(col_selected - os, row_selected)]]
+                                    del[self.board.representation[(col_selected - os, row_selected)]]  
+                    
                     self.board.representation[(col, row)] = self.selected_piece
-                    if (self.selected_piece.name == PieceType.PAWN and self.selected_piece.color == PieceColor.WHITE and row == 0) or (self.selected_piece.name == PieceType.PAWN and self.selected_piece.color == PieceColor.BLACK and row == 7):
-                            self.show_promotion_ui((col, row))
-                    self.change_turn()
-                    if self.current_turn == self.ai_turn:
-                        self.engine.make_move()
-                        self.change_turn()
+                    if (self.selected_piece.name == PieceType.PAWN and self.selected_piece.color == PieceColor.WHITE and row == 0) or \
+                       (self.selected_piece.name == PieceType.PAWN and self.selected_piece.color == PieceColor.BLACK and row == 7):
+                        self.show_promotion_ui((col, row))
+                    if self.is_checkmate(self.current_turn):
+                        self.game_end = True
+                        victory = PieceColor.WHITE if self.current_turn == PieceColor.BLACK else PieceColor.BLACK
+                        self.display_victory(victory)
+
+                    self.selected_piece.increment_num_of_moves()  
+                    self.change_turn()  
                 else:
                     self.board.representation[self.selected_coord] = self.selected_piece
+            
             self.dragging = False
             self.selected_piece = None
             self.legal_moves = None
@@ -107,6 +208,9 @@ class Game(GameObject):
             self.current_turn = PieceColor.BLACK
         else:
             self.current_turn = PieceColor.WHITE
+        current_hash = self.zobrist.compute_hash()
+        self.history.append(current_hash)
+        self.repetition_count[current_hash] += 1
 
     def king_will_be_in_danger(self, representation, selected_coord, selected_piece, target_coord, turn):
         clone_representation = representation.copy()
