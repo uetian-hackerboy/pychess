@@ -5,6 +5,7 @@ import globals
 from game.piece import PieceType, PieceColor
 from utils.image import load_image
 from game.piece import Piece
+from game.engine import Engine
 
 class Game(GameObject):
     _instance = None
@@ -25,6 +26,11 @@ class Game(GameObject):
             self.legal_moves = None
             self.initialized = True
             self.current_turn: PieceColor = PieceColor.WHITE
+            self.player_turn: PieceColor = PieceColor.WHITE
+            self.ai_turn: PieceColor = PieceColor.BLACK
+            if self.player_turn == PieceColor.BLACK:
+                self.ai_turn = PieceColor.WHITE
+            self.engine = Engine(self.board, self.ai_turn)
             globals.game_instance = self
     
     def update(self):
@@ -50,11 +56,11 @@ class Game(GameObject):
         col, row = pos[0] // self.square_size, pos[1] // self.square_size
         self.selected_coord = (col, row)
         self.selected_piece = self.board.get_piece_obj_on_pos(self.selected_coord)
-        if self.selected_piece and self.selected_piece.color == self.current_turn:
+        if self.selected_piece and self.selected_piece.color == self.current_turn and self.current_turn == self.player_turn:
             legal_moves_cadiates = self.selected_piece.get_legal_moves(self.selected_coord, self.board.representation)
             self.legal_moves = []
             for legal_move in legal_moves_cadiates:
-                if not self.king_will_be_in_danger(legal_move):
+                if not self.king_will_be_in_danger(self.board.representation, legal_move, self.current_turn):
                     self.legal_moves.append(legal_move)
             del[self.board.representation[self.selected_coord]]
             self.dragging = True
@@ -86,18 +92,24 @@ class Game(GameObject):
                     self.board.representation[(col, row)] = self.selected_piece
                     if (self.selected_piece.name == PieceType.PAWN and self.selected_piece.color == PieceColor.WHITE and row == 0) or (self.selected_piece.name == PieceType.PAWN and self.selected_piece.color == PieceColor.BLACK and row == 7):
                             self.show_promotion_ui((col, row))
-                    if self.current_turn == PieceColor.WHITE:
-                        self.current_turn = PieceColor.BLACK
-                    else:
-                        self.current_turn = PieceColor.WHITE
+                    self.change_turn()
+                    if self.current_turn == self.ai_turn:
+                        self.engine.make_move()
+                        self.change_turn()
                 else:
                     self.board.representation[self.selected_coord] = self.selected_piece
             self.dragging = False
             self.selected_piece = None
             self.legal_moves = None
+    
+    def change_turn(self):
+        if self.current_turn == PieceColor.WHITE:
+            self.current_turn = PieceColor.BLACK
+        else:
+            self.current_turn = PieceColor.WHITE
 
-    def king_will_be_in_danger(self, target_coord):
-        clone_representation = self.board.representation.copy()
+    def king_will_be_in_danger(self, representation, target_coord, turn):
+        clone_representation = representation.copy()
         col, row = target_coord
 
         if self.selected_coord in clone_representation:
@@ -106,14 +118,14 @@ class Game(GameObject):
 
         king_position = None
         for coord, piece in clone_representation.items():
-            if piece.name == PieceType.KING and piece.color == self.current_turn:
+            if piece.name == PieceType.KING and piece.color == turn:
                 king_position = coord
                 break
 
         if not king_position:
-            raise ValueError("King is not even on the board bro.")
+            raise ValueError("King not found on the board")
 
-        opponent = PieceColor.WHITE if self.current_turn == PieceColor.BLACK else PieceColor.BLACK
+        opponent = PieceColor.WHITE if turn == PieceColor.BLACK else PieceColor.BLACK
         threat_coords = self.board.generate_threat_map(opponent, clone_representation)
 
         if king_position in threat_coords:
@@ -173,6 +185,5 @@ class Game(GameObject):
     def promote_pawn(self, target_coord, new_piece_type):
         new_piece = Piece(self.selected_piece.color, new_piece_type, self.square_size, self.square_size)
         self.board.representation[target_coord] = new_piece
-        print(new_piece.image)
         self.selected_piece = None
         self.legal_moves = None

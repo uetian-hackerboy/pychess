@@ -26,6 +26,9 @@ class Piece:
     
     def increment_num_of_moves(self):
         self.number_of_moves += 1
+
+    def decrement_num_of_moves(self):
+        self.number_of_moves -= 1
          
     def get_legal_moves(self, current_coord, representation):
         legal_coords: List[Tuple[int, int]] = []
