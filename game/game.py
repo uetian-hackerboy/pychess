@@ -60,7 +60,7 @@ class Game(GameObject):
             legal_moves_cadiates = self.selected_piece.get_legal_moves(self.selected_coord, self.board.representation)
             self.legal_moves = []
             for legal_move in legal_moves_cadiates:
-                if not self.king_will_be_in_danger(self.board.representation, legal_move, self.current_turn):
+                if not self.king_will_be_in_danger(self.board.representation, self.selected_coord, self.selected_piece, legal_move, self.current_turn):
                     self.legal_moves.append(legal_move)
             del[self.board.representation[self.selected_coord]]
             self.dragging = True
@@ -108,13 +108,13 @@ class Game(GameObject):
         else:
             self.current_turn = PieceColor.WHITE
 
-    def king_will_be_in_danger(self, representation, target_coord, turn):
+    def king_will_be_in_danger(self, representation, selected_coord, selected_piece, target_coord, turn):
         clone_representation = representation.copy()
         col, row = target_coord
 
-        if self.selected_coord in clone_representation:
-            del clone_representation[self.selected_coord]
-        clone_representation[(col, row)] = self.selected_piece
+        if selected_coord in clone_representation:
+            del clone_representation[selected_coord]
+        clone_representation[(col, row)] = selected_piece
 
         king_position = None
         for coord, piece in clone_representation.items():

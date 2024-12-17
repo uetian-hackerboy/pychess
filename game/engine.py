@@ -1,5 +1,5 @@
 from game.board import Board
-from game.piece import PieceColor, Piece
+from game.piece import PieceColor, Piece, PieceType
 import random
 import globals
 
@@ -21,12 +21,13 @@ class Engine:
     def get_all_legal_moves(self):
         game = globals.game_instance
         legal_moves = []
-        for pos, piece in self.board.representation.items():
+        for pos, piece in game.board.representation.items():
             if piece.color == self.ai_color:
-                moves = piece.get_legal_moves(pos, self.board.representation)
+                moves = piece.get_legal_moves(pos, game.board.representation)
                 for move in moves:
-                    if not game.king_will_be_in_danger(self.board.representation, move, self.ai_color):
+                    if not game.king_will_be_in_danger(game.board.representation, pos, piece, move, self.ai_color):
                         legal_moves.append((piece, pos, move))
+        print("LegalMoves",len(legal_moves))
         return legal_moves
 
     def execute_move(self, piece: Piece, start_pos, end_pos):
