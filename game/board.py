@@ -77,11 +77,12 @@ class Board(GameObject):
 
     def draw_pieces(self):
         for pos, piece in self.representation.items():
-            col, row = pos
-            piece_rect = piece.image.get_rect()
-            x = col * self.square_size + (self.square_size - piece_rect.width) // 2
-            y = row * self.square_size + (self.square_size - piece_rect.height) // 2
-            draw_image(piece.image, self.screen, x, y)
+            if piece is not None:
+                col, row = pos
+                piece_rect = piece.image.get_rect()
+                x = col * self.square_size + (self.square_size - piece_rect.width) // 2
+                y = row * self.square_size + (self.square_size - piece_rect.height) // 2
+                draw_image(piece.image, self.screen, x, y)
     
     def draw_legal_moves(self):
         game = globals.game_instance

@@ -1,5 +1,4 @@
 from typing import List, Tuple
-import pygame
 from enum import Enum
 import globals
 from utils.image import load_image
