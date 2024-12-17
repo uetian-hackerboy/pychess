@@ -77,7 +77,7 @@ class Board(GameObject):
 
     def draw_pieces(self):
         for pos, piece in self.representation.items():
-            if piece is not None:
+            if piece is not None and piece.showing == True:
                 col, row = pos
                 piece_rect = piece.image.get_rect()
                 x = col * self.square_size + (self.square_size - piece_rect.width) // 2

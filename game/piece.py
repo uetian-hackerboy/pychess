@@ -23,6 +23,7 @@ class Piece:
         self.number_of_moves = 0
         self.image = load_image(f"assets/{color.value}_{name.value}.png", image_width=image_width, image_height=image_height)
         self.board = None
+        self.showing = True
     
     def increment_num_of_moves(self):
         self.number_of_moves += 1

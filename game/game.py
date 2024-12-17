@@ -158,7 +158,8 @@ class Game(GameObject):
                     if offset > 1 or offset < -1:
                         castling_legal.append(lm)
                 self.legal_moves = castling_legal
-            del[self.board.representation[self.selected_coord]]
+            # del[self.board.representation[self.selected_coord]]
+            self.selected_piece.showing = False
             self.dragging = True
 
     def handle_mouse_up(self, pos):
@@ -186,6 +187,8 @@ class Game(GameObject):
                                     del[self.board.representation[(col_selected - os, row_selected)]]  
                     
                     self.board.representation[(col, row)] = self.selected_piece
+                    del[self.board.representation[self.selected_coord]]
+                    self.selected_piece.showing = True
                     if (self.selected_piece.name == PieceType.PAWN and self.selected_piece.color == PieceColor.WHITE and row == 0) or \
                        (self.selected_piece.name == PieceType.PAWN and self.selected_piece.color == PieceColor.BLACK and row == 7):
                         self.show_promotion_ui((col, row))
@@ -196,9 +199,10 @@ class Game(GameObject):
 
                     self.selected_piece.increment_num_of_moves()  
                     self.change_turn()  
+                    
                 else:
                     self.board.representation[self.selected_coord] = self.selected_piece
-            
+                    self.selected_piece.showing = True
             self.dragging = False
             self.selected_piece = None
             self.legal_moves = None
