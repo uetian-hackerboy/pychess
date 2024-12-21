@@ -196,9 +196,10 @@ class Game(GameObject):
                         self.game_end = True
                         victory = PieceColor.WHITE if self.current_turn == PieceColor.BLACK else PieceColor.BLACK
                         self.display_victory(victory)
-
-                    self.selected_piece.increment_num_of_moves()  
-                    self.change_turn()  
+                    
+                    if self.selected_piece:
+                        self.selected_piece.increment_num_of_moves()  
+                    self.change_turn()
                     
                 else:
                     self.board.representation[self.selected_coord] = self.selected_piece
